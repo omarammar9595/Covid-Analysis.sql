@@ -1,0 +1,133 @@
+#AVG distance, capacity, cogs, bookings per category
+
+SELECT Category, (AVG(Distance)) AS avg_dist, AVG(Capacity) AS avg_cap, AVG(COGs) AS avg_cogs, AVG(Bookings) AS avg_bookings
+ FROM `project-348014.swvl.swvl`
+ GROUP BY Category
+ ORDER BY avg_dist DESC;
+
+ #Total avg distance
+ 
+ SELECT AVG(Distance) AS avg_total_dis
+ FROM `project-348014.swvl.swvl`;
+
+#Total avg cpacity and bookings
+ 
+ SELECT AVG(Capacity) as avg_cap, AVG(Bookings) AS avg_bookings
+ FROM project-348014.swvl.swvl;
+
+#Bookings Percentage per category
+
+SELECT Category,(SUM(Bookings)/793332)*100 AS perc_cat
+FROM  project-348014.swvl.swvl
+GROUP BY Category;
+
+#Diff between total distance and distance per cat
+
+SELECT
+    Category,avg_km, (avg_Ges - avg_km) as Diff
+FROM
+    (SELECT AVG(Distance) AS avg_KM, Category
+     FROM project-348014.swvl.swvl
+     GROUP BY Category) t_cat 
+  CROSS JOIN
+    (SELECT AVG(Distance) AS avg_Ges
+    FROM project-348014.swvl.swvl) t_all
+ORDER BY Category ASC;
+
+#Routes who have low number of bookings compared to number of seats
+
+SELECT Route, Bookings, Capacity
+FROM project-348014.swvl.swvl
+GROUP BY  Route, Bookings, Capacity
+HAVING Bookings < Capacity
+ORDER BY Bookings DESC;
+
+#low performing captains that have high cancellations 
+
+SELECT DISTINCT Captain , COUNT(RideStatus) AS total_canc
+ FROM `project-348014.swvl.swvl` 
+ WHERE RideStatus = 'cancelled'
+ GROUP BY Captain
+ORDER BY total_canc DESC;
+
+
+#Time with most cancellation
+
+SELECT DISTINCT Time, COUNT(RideStatus) AS tot_canc
+FROM `project-348014.swvl.swvl`
+WHERE RideStatus = 'cancelled'
+GROUP BY Time
+ORDER BY tot_canc DESC;
+
+#Overall fulfillment for all captains for all weeks
+
+SELECT
+   (completed_stat/all_stat) as overall_fulfillment
+FROM
+    (SELECT COUNT(RideStatus) AS all_stat
+     FROM project-348014.swvl.swvl 
+    ) t_cat 
+  CROSS JOIN
+    (SELECT  COUNT(RideStatus) AS Completed_stat
+    FROM project-348014.swvl.swvl 
+    WHERE RideStatus = 'completed'
+    ) t_all;
+
+#Total Captains
+   
+    SELECT COUNT(DISTINCT Captain) AS total_captains
+    FROM  project-348014.swvl.swvl;
+
+
+#Total GMV per category
+
+SELECT Category, SUM(GMV) AS total_gmv
+FROM project-348014.swvl.swvl
+GROUP BY Category 
+ORDER BY total_gmv DESC;
+
+
+#captains that exceeded 30 cancelations 
+
+SELECT DISTINCT Captain, Count(RideStatus) as total_canc
+FROM  project-348014.swvl.swvl
+WHERE RideStatus = 'cancelled'
+GROUP BY Captain
+HAVING total_canc > 30 
+ORDER BY total_canc ASC;
+
+#Days of the week for each date
+SELECT DISTINCT Date, FORMAT_DATETIME('%A', CAST(date AS DATETIME)) AS weekday
+FROM `project-348014.swvl.swvl` 
+ORDER BY Date ASC;
+
+#Overall fulfillment of all weeks for all captains and weekdays and captains
+
+SELECT cap_dat, overall_ful_all_weeks_all_cap
+FROM
+
+(SELECT DISTINCT Date, Captain, FORMAT_DATETIME('%A', CAST(date AS DATETIME)) AS weekday
+FROM `project-348014.swvl.swvl`
+ORDER BY Date ASC) cap_dat
+
+  CROSS JOIN
+
+(SELECT
+   (completed_stat/all_stat) as ful
+FROM
+    (SELECT COUNT(RideStatus) AS all_stat
+     FROM project-348014.swvl.swvl 
+    ) t_cat 
+  CROSS JOIN
+    (SELECT  COUNT(RideStatus) AS Completed_stat
+    FROM project-348014.swvl.swvl 
+    WHERE RideStatus = 'completed'
+    ) t_all) overall_ful_all_weeks_all_cap
+
+    ORDER BY Date ASC
+    
+#USING RANK FUNCTION to show top 3 Captains earning max GMV in each category per city
+SELECT * FROM
+(SELECT Category, Captain, city, GMV, RANK() OVER(PARTITION BY Category ORDER BY GMV DESC) AS rank
+FROM project-348014.swvl.swvl) AS x
+WHERE x.rank < 4;
